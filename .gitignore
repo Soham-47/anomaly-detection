@@ -1,0 +1,5 @@
+eda.ipynb
+pycache__/
+checkpoints/
+.venv
+venv/
