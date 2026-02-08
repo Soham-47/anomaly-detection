@@ -1,0 +1,6 @@
+{
+    "python.defaultInterpreterPath": "/home/soham/cascade-detector/scripts/.venv/bin/python",
+    "python.analysis.extraPaths": [
+        "/home/soham/cascade-detector/scripts/.venv/lib/python3.12/site-packages"
+    ]
+}

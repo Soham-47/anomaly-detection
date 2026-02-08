@@ -1,0 +1,21 @@
+# YOLO Dataset Configuration
+# Path to dataset root
+path: /home/soham/cascade-detector/data/yolo_format
+
+# Train, val, test sets as relative paths to path/
+train: images/train
+val: images/val
+test: images/test
+
+# Number of classes
+nc: 7
+
+# Class names (indexed 0-6)
+names:
+  0: alligator crack
+  1: block crack
+  2: longitudinal crack
+  3: other corruption
+  4: pothole
+  5: repair
+  6: transverse crack
