@@ -137,12 +137,19 @@ class AnomalyDetector:
         cv2.imwrite(filename, snapshot)
 
 def main():
+    parser = argparse.ArgumentParser(description="TFLite Inference for Road Anomaly Detection")
+    parser.add_argument("--video", type=str, help="Path to video file (if blank, uses webcam)")
+    parser.add_argument("--model", type=str, default="models/best_road_anomaly_int8.tflite", help="Path to TFLite model")
+    parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold")
+    args = parser.parse_args()
+
     # CONFIGURATION
-    MODEL_PATH = "models/best_road_anomaly_int8.tflite" # Path to your exported model
+    MODEL_PATH = args.model
+    SOURCE = args.video if args.video else 0
     W, H = 640, 480
     
-    detector = AnomalyDetector(MODEL_PATH)
-    stream = VideoStream(src=0, width=W, height=H).start()
+    detector = AnomalyDetector(MODEL_PATH, conf_threshold=args.conf)
+    stream = VideoStream(src=SOURCE, width=W, height=H).start()
     
     print("Starting Road Anomaly Detection... Press 'q' to exit.")
     
