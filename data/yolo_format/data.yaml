@@ -1,6 +1,6 @@
 # YOLO Dataset Configuration
 # Path to dataset root
-path: /home/soham/cascade-detector/data/yolo_format
+path: /home/soham/Downloads/anomaly-detection/anomaly-detection/data/yolo_format
 
 # Train, val, test sets as relative paths to path/
 train: images/train

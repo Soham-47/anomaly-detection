@@ -138,7 +138,7 @@ class AnomalyDetector:
 
 def main():
     # CONFIGURATION
-    MODEL_PATH = "models/best_road_anomaly_float32.tflite" # Path to your exported model
+    MODEL_PATH = "models/best_road_anomaly_int8.tflite" # Path to your exported model
     W, H = 640, 480
     
     detector = AnomalyDetector(MODEL_PATH)
@@ -156,8 +156,11 @@ def main():
             if frame is None:
                 continue
             
-            # Run detection
+            # Run detection and measure model speed
+            infer_start = time.time()
             detections = detector.run_inference(frame)
+            infer_time_ms = (time.time() - infer_start) * 1000
+            model_fps = 1000 / infer_time_ms if infer_time_ms > 0 else 0
             
             # Draw detections for display
             for det in detections:
@@ -169,14 +172,15 @@ def main():
                 cv2.putText(frame, f"{label} {conf:.2f}", (x1, y1 - 10), 
                             cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 255, 0), 2)
             
-            # FPS Calculation
+            # FPS Calculation (display/capture speed)
             fps_counter += 1
             if (time.time() - fps_start_time) > 1:
                 fps = fps_counter / (time.time() - fps_start_time)
                 fps_counter = 0
                 fps_start_time = time.time()
 
-            cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+            cv2.putText(frame, f"Video FPS: {fps:.1f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+            cv2.putText(frame, f"Model FPS: {model_fps:.1f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
             cv2.imshow("Road Anomaly Detection", frame)
             
             if cv2.waitKey(1) & 0xFF == ord('q'):
