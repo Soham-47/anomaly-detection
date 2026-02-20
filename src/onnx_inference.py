@@ -153,7 +153,7 @@ class AsyncInference:
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--video", type=str, required=True)
-    parser.add_argument("--model", type=str, default="models/best_road_anomaly_quantized.onnx")
+    parser.add_argument("--model", type=str, default="models/best_road_anomaly.onnx")
     parser.add_argument("--conf", type=float, default=0.25)
     parser.add_argument("--iou", type=float, default=0.45)
     parser.add_argument("--save", action="store_true", default=False, help="Save the output video to a file")
@@ -216,7 +216,10 @@ def main():
                 fps_counter = 0
                 fps_start_time = time.time()
 
-            cv2.putText(frame, f"Video FPS: {fps:.1f} | Model Latency: {latency:.1f}ms", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            model_fps = 1000 / latency if latency > 0 else 0
+            
+            cv2.putText(frame, f"Video FPS: {fps:.1f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
+            cv2.putText(frame, f"Model FPS: {model_fps:.1f}", (10, 60), cv2.FONT_HERSHEY_SIMPLEX, 0.7, (255, 255, 255), 2)
             
             if out:
                 out.write(frame)
