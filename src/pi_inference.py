@@ -52,7 +52,7 @@ class AnomalyDetector:
         self.conf_threshold = conf_threshold
         
         # Default RDD2022 labels if not provided
-        self.labels = ["alligator crack", "box crack", "longitudinal crack", "other corruption", "pothole", "repair", "transverse crack"] # Update this based on your specific classes
+        self.labels = ["alligator crack", "block crack", "longitudinal crack", "other corruption", "pothole", "repair", "transverse crack"] # Update this based on your specific classes
         if labels_path and os.path.exists(labels_path):
             with open(labels_path, 'r') as f:
                 self.labels = [line.strip() for line in f.readlines()]

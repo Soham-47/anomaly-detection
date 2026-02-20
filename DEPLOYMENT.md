@@ -132,3 +132,29 @@ To reduce false positives:
 - **Confidence Threshold**: Adjust `conf_threshold` in `pi_inference.py`. (Recommended: 0.3 - 0.4).
 - **IOU Threshold**: Ensure NMS (Non-Maximum Suppression) is properly handled to avoid double detection of the same pothole.
 - **Data Augmentation**: Re-train with "Background" images (images of clean roads) to teach the model what NOT to detect.
+
+# ONNX Video Inference (Dashcam Processing)
+
+If you have a dashcam video file and want to run inference on it using ONNX Runtime (e.g., on a desktop or powerful edge device), use the `onnx_inference.py` script.
+
+### 1. Requirements
+Ensure you have `onnxruntime` installed:
+```bash
+pip install onnxruntime opencv-python numpy
+```
+
+### 2. Run Inference on Video
+Pass the path to your dashcam video:
+```bash
+python src/onnx_inference.py --video path/to/your/dashcam_video.mp4 --model models/best_road_anomaly.onnx
+```
+
+### 3. Parameters
+- `--video`: Path to the input video file (required).
+- `--model`: Path to the ONNX model (default: `models/best_road_anomaly.onnx`).
+- `--conf`: Confidence threshold (default: 0.25).
+- `--iou`: IOU threshold for NMS (default: 0.45).
+- `--show`: Whether to display the video output (default: True).
+
+Detections will be logged to `onnx_anomaly_log.csv` and snapshots will be saved in the `onnx_detections/` folder.
+
