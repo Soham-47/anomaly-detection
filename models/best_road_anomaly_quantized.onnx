@@ -1,5 +1,4 @@
-
-onnx.quantize0.1.0:Áú·
+onnx.quantize0.1.0:Áú·
 i
 imagesimages_quantizedimages_scaleimages_zero_pointimages_QuantizeLinear"DynamicQuantizeLinear
 }
@@ -7566,12 +7565,12 @@ $/model.22/m.0/cv3/conv/Conv_output_0
 
 
 
-ÐABr
+ÐABr
 
 onnx.inferonnxruntime.quantr=
 description.Ultralytics YOLO11n model trained on data.yamlr
 authorUltralyticsr"
-date2026-02-20T18:10:59.722231r
+date2026-02-20T18:47:41.856714r
 version8.4.14r=
 license2AGPL-3.0 License (https://ultralytics.com/license)r$
 docshttps://docs.ultralytics.comr
@@ -7581,7 +7580,7 @@ onnx.inferonnxruntime.quantr=
 batch1r
 imgsz
 [640, 640]r”
-namesŠ{0: 'alligator_crack', 1: 'block_crack', 2: 'longitudinal_crack', 3: 'other_corruption', 4: 'pothole', 5: 'repair', 6: 'transverse_crack'}rd
-args\{'batch': 1, 'half': False, 'dynamic': False, 'simplify': True, 'opset': None, 'nms': False}r
+namesŠ{0: 'alligator_crack', 1: 'block_crack', 2: 'longitudinal_crack', 3: 'other_corruption', 4: 'pothole', 5: 'repair', 6: 'transverse_crack'}rb
+argsZ{'batch': 1, 'half': False, 'dynamic': False, 'simplify': True, 'opset': 17, 'nms': False}r
 channels3r
 end2endFalse
