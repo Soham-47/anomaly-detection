@@ -20,3 +20,4 @@ for split in splits:
         shutil.copy(img, dst_dir / img.name)
 
 print("Images copied.")
+

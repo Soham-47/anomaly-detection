@@ -46,14 +46,41 @@ class ONNXAnomalyDetector:
             writer.writerow([timestamp, anomaly_type, confidence])
 
     def preprocess(self, frame):
-        # Resize and pad if necessary (here simple resize)
-        img = cv2.resize(frame, (self.input_width, self.input_height))
+        """Resizes frame to input size using letterboxing to maintain aspect ratio"""
+        h, w = frame.shape[:2]
+        r = min(self.input_width / w, self.input_height / h)
+        
+        # New dimensions
+        new_unpad = (int(round(w * r)), int(round(h * r)))
+        dw, dh = self.input_width - new_unpad[0], self.input_height - new_unpad[1]
+        
+        # Divide padding into two sides
+        dw /= 2
+        dh /= 2
+        
+        # Resize
+        if (w, h) != new_unpad:
+            img = cv2.resize(frame, new_unpad, interpolation=cv2.INTER_LINEAR)
+        else:
+            img = frame.copy()
+            
+        # Add border (padding)
+        top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
+        left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+        img = cv2.copyMakeBorder(img, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114, 114, 114))
+        
+        # Color conversion
         img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)
         
-        # Normalize to [0, 1] and transpose to [C, H, W]
+        # To NCHW
         img = img.astype(np.float32) / 255.0
         img = img.transpose(2, 0, 1)
         img = np.expand_dims(img, axis=0)
+        
+        # Save ratios and padding for coordinate scaling
+        self.ratio = r
+        self.padding = (left, top)
+        
         return img
 
     def nms(self, boxes, scores, iou_threshold):
@@ -93,41 +120,38 @@ class ONNXAnomalyDetector:
         input_data = self.preprocess(frame)
         outputs = self.session.run([self.output_name], {self.input_name: input_data})
         
-        # YOLOv8 ONNX output shape: [1, 4 + num_classes, 8400]
-        output = outputs[0][0]
-        output = output.T # Shape: [8400, 4 + num_classes]
-        
-        boxes = []
-        scores = []
-        class_ids = []
+        # YOLOv8 ONNX output shape: [1, 11, 2100]
+        # After .T -> [2100, 11]  (rows = anchors, cols = cx,cy,w,h + 7 class scores)
+        output = outputs[0][0].T  # Shape: [2100, 11]
         
         h, w, _ = frame.shape
         
-        for pred in output:
-            class_scores = pred[4:]
-            class_id = np.argmax(class_scores)
-            confidence = class_scores[class_id]
-            
-            if confidence > self.conf_threshold:
-                # Center X, Center Y, Width, Height
-                cx, cy, bw, bh = pred[:4]
-                
-                # Rescale to original frame size
-                x1 = (cx - bw/2) * w / self.input_width
-                y1 = (cy - bh/2) * h / self.input_height
-                x2 = (cx + bw/2) * w / self.input_width
-                y2 = (cy + bh/2) * h / self.input_height
-                
-                boxes.append([x1, y1, x2, y2])
-                scores.append(confidence)
-                class_ids.append(class_id)
+        # Get scores and filter by threshold
+        scores_all = output[:, 4:]
+        max_scores = np.max(scores_all, axis=1)
+        mask = max_scores > self.conf_threshold
         
-        if not boxes:
+        filtered_output = output[mask]
+        filtered_scores = max_scores[mask]
+        filtered_class_ids = np.argmax(scores_all[mask], axis=1)
+        
+        if len(filtered_output) == 0:
             return []
             
+        boxes = []
+        for pred in filtered_output:
+            cx, cy, bw, bh = pred[:4]
+            x1 = (cx - bw/2 - self.padding[0]) / self.ratio
+            y1 = (cy - bh/2 - self.padding[1]) / self.ratio
+            x2 = (cx + bw/2 - self.padding[0]) / self.ratio
+            y2 = (cy + bh/2 - self.padding[1]) / self.ratio
+            boxes.append([x1, y1, x2, y2])
+            
         boxes = np.array(boxes)
-        scores = np.array(scores)
+        scores = filtered_scores
+        class_ids = filtered_class_ids
         
+        # Apply NMS
         indices = self.nms(boxes, scores, self.iou_threshold)
         
         detections = []
@@ -167,6 +191,7 @@ def main():
     parser.add_argument("--conf", type=float, default=0.25, help="Confidence threshold")
     parser.add_argument("--iou", type=float, default=0.45, help="IOU threshold for NMS")
     parser.add_argument("--show", action="store_true", default=True, help="Display video output")
+    parser.add_argument("--infer-fps", type=float, default=5.0, help="How many times per second to run inference (default: 5)")
     
     args = parser.parse_args()
 
@@ -181,23 +206,37 @@ def main():
         print(f"Error: Could not open video file {args.video}")
         return
 
-    print(f"Processing video: {args.video}")
+    # Read video FPS to play at correct speed
+    video_fps = cap.get(cv2.CAP_PROP_FPS)
+    if video_fps <= 0 or video_fps > 120:
+        video_fps = 30  # Fallback default
+    frame_delay = int(1000 / video_fps)  # Milliseconds to wait per frame
+
+    # Only run inference every Nth frame to match desired inference FPS
+    infer_every_n = max(1, int(round(video_fps / args.infer_fps)))
+    
+    print(f"Processing video: {args.video} at {video_fps:.1f} FPS")
+    print(f"Running inference every {infer_every_n} frames (~{video_fps/infer_every_n:.1f} inferences/sec)")
     print("Press 'q' to exit.")
 
     fps_start_time = time.time()
     fps_counter = 0
     fps = 0
+    frame_idx = 0
+    last_detections = []  # Keep showing last detections between inference frames
 
     while cap.isOpened():
         ret, frame = cap.read()
         if not ret:
             break
         
-        # Run detection
-        detections = detector.run_inference(frame)
+        # Only run inference every Nth frame
+        if frame_idx % infer_every_n == 0:
+            last_detections = detector.run_inference(frame)
+        frame_idx += 1
         
-        # Draw detections
-        for det in detections:
+        # Draw last detections (persists across skipped frames)
+        for det in last_detections:
             x1, y1, x2, y2 = det["box"]
             label = det["label"]
             conf = det["confidence"]
@@ -213,11 +252,12 @@ def main():
             fps_counter = 0
             fps_start_time = time.time()
 
-        cv2.putText(frame, f"FPS: {fps:.2f}", (10, 30), cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 2)
+        cv2.putText(frame, f"FPS: {fps:.1f} | Infer: {video_fps/infer_every_n:.0f}/s", (10, 30),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
         
         if args.show:
             cv2.imshow("ONNX Road Anomaly Detection", frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'):
+            if cv2.waitKey(frame_delay) & 0xFF == ord('q'):
                 break
                 
     cap.release()

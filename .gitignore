@@ -3,3 +3,4 @@ pycache__/
 checkpoints/
 .venv
 venv/
+onnx_detections
