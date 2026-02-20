@@ -19,10 +19,6 @@ This project implements an edge AI application that processes dashcam footage in
   - Exports to **TFLite Float32** (Standard) and includes logic for **INT8 Quantization**.
   - Scales input resolution to **320x320** for a ~4x speed boost on edge hardware.
   - Automatically manages file organization in the `models/` folder.
-
-### 3. Documentation
-- **`DEPLOYMENT.md`**: A detailed guide on setting up the Raspberry Pi environment, installing light-weight runtimes (`tflite-runtime`), and fine-tuning Performance/Accuracy trade-offs.
-
 ---
 
 ## 📂 Project Structure
