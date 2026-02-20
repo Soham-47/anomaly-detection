@@ -169,19 +169,26 @@ def main():
     video_fps = cap.get(cv2.CAP_PROP_FPS)
     if video_fps <= 0 or video_fps > 120: video_fps = 30
     frame_delay = int(1000 / video_fps)
-    
+    fps_start_time = time.time()
+    fps_counter = 0
+    fps = 0
+    frames_processed = 0
+
     # Initialize Video Writer if --save is used
     out = None
     if args.save:
         width = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
         height = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-        fourcc = cv2.VideoWriter_fourcc(*'mp4v')
-        out = cv2.VideoWriter(args.output, fourcc, video_fps, (width, height))
-        print(f"Saving video to: {args.output}")
-
-    fps_start_time = time.time()
-    fps_counter = 0
-    fps = 0
+        # XVID is more robust on Linux
+        fourcc = cv2.VideoWriter_fourcc(*'XVID')
+        # Ensure we use .avi for XVID or .mp4 might fail on some players
+        output_file = args.output if args.output.endswith('.avi') else args.output.rsplit('.', 1)[0] + '.avi'
+        out = cv2.VideoWriter(output_file, fourcc, video_fps, (width, height))
+        if not out.isOpened():
+            print("Error: Could not open VideoWriter. Trying mp4v fallback...")
+            fourcc = cv2.VideoWriter_fourcc(*'mp4v')
+            out = cv2.VideoWriter(args.output, fourcc, video_fps, (width, height))
+        print(f"Saving video to: {output_file if out.isOpened() else args.output}")
 
     try:
         while True:
@@ -213,6 +220,9 @@ def main():
             
             if out:
                 out.write(frame)
+                frames_processed += 1
+                if frames_processed % 30 == 0:
+                    print(f"Saved {frames_processed} frames...", end="\r")
             
             if args.show:
                 cv2.imshow("Async Road Anomaly Detection", frame)
